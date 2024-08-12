@@ -14,6 +14,8 @@ from downloader import (
 )
 from dotenv import load_dotenv
 
+from handyman import set_up
+
 load_dotenv()
 
 tag = "Windows Desktop Robot : "
@@ -26,49 +28,26 @@ def example_orders_task():
     print(
         f"\n\n{tag} ...... Task starting .... will start downloading app and orders from Azure Storage"
     )
-    try:
-        download_orders_files()
-        use_excel = os.getenv("USE_EXCEL")
-        if use_excel == "1":
-            json_list = load_excel_files_to_json()
-        else:
-            json_list = load_csv_files_to_json()
+    # Set up the Robot by downloading artifacts from Azure Storage
+    raw_list = set_up()
+    # Remove
+    json_list = raw_list[2:]
 
-        # get the desktop app files ....
-        app_files = download_app_folder()
-
-        print(f"\n\n{tag} number of orders in json_list : {len(json_list)}")
-        print(f"{tag} number of app files: {len(app_files)}")
-
-    except Exception as e:
-        print(f"\n\n{tag} We hit a wall here, Boss! - {e}")
+    # Create the desktop that will run the app
+    # Open the Windows desktop app - the app_folder contains everything the app needs to run
 
     desktop = Desktop(locators_path="locators.json")
     # app = desktop.open_application(r"C:\Users\aubreym\Desktop\Dannys\app\testapp.exe")
     app = desktop.open_application(app_path)
-    print(f"{tag} have we opened the RobotTester app? {app}")
+    if app:
+        print(f"{tag} the Windows desktop app has been opened: {app}")
     sleep(1)
     count = 0
+    error_count = 0
     try:
-        login = desktop.wait_for_element("login")
-        print(f"{tag} login screen established; {login}")
-        username = desktop.wait_for_element("username")
-        password = desktop.wait_for_element("password")
-
-        username_env = os.getenv("USER_NAME")
-        password_env = os.getenv("PASSWORD")
-        print(f"username element: {username_env} password: {password_env}")
-
-        desktop.type_text_into(username, username_env, True, False)
-        desktop.type_text_into(password, password_env, True, False)
-
-        submit_creds = desktop.wait_for_element("submit")
-        print(f"submit_creds: {submit_creds}")
-        desktop.click("submit")
-        print("Submit button clicked!!")
-        desktop.click("go_to_sales")
-        print("Go to Sales button clicked!!")
-        # app has navigated to order screen
+        # Run the login process on the Windows desktop app
+        _handle_login(desktop)
+        # app has navigated to order screen, set image elements
         customer_id = desktop.wait_for_element("customer_id")
         product_id = desktop.wait_for_element("product_id")
         quantity = desktop.wait_for_element("quantity")
@@ -76,33 +55,21 @@ def example_orders_task():
         send_order = desktop.wait_for_element("send_order")
         close = desktop.wait_for_element("close")
 
+        # create orders from the spreadsheet or csv downloaded from Azure Storage
+        # For each row in the data, use the opened Windows app and do the dance
         try:
             for order_json in json_list:
-                if count < 2:
-                    count = count + 1
-                    print(f"\n{tag} ignored order_json: {order_json}\n")
-                    continue
 
                 try:
-                    customer_id_value = order_json[0]
-                    product_id_value = order_json[1]
-                    quantity_value = order_json[2]
-                    print(
-                        f"{tag} handling order #{count + 1}: customer: {customer_id_value} product: {product_id_value} quantity: {quantity_value}"
-                    )
-
-                    desktop.type_text_into(
-                        customer_id, f"{customer_id_value}", True, False
-                    )
-                    desktop.type_text_into(
-                        product_id, f"{product_id_value}", True, False
-                    )
-                    desktop.type_text_into(quantity, f"{quantity_value}", True, False)
-                    desktop.click(checkbox)
-                    desktop.click(send_order)
-
-                    print(
-                        f"{tag} Send Order button clicked!! - customer: {customer_id_value} product: {product_id_value} quantity: {quantity_value}"
+                    _handle_order(
+                        desktop,
+                        count,
+                        customer_id,
+                        product_id,
+                        quantity,
+                        checkbox,
+                        send_order,
+                        order_json,
                     )
                     count = count + 1
                     sleep(1)
@@ -110,21 +77,25 @@ def example_orders_task():
                     print(
                         f"\n{tag} The accelerator seems to be stuck! What we gonna do, Boss? - {e}\n"
                     )
+                    error_count = error_count + 1
                     continue
 
         except Exception as e:
             print(f"{tag} The tree moved and we crashed into it :) - {e}")
             if app.is_running:
-                appx = desktop.close_application(app)
+                desktop.close_application(app)
                 return
 
-        print(f"{tag} all {len(json_list)} orders should be cool!")
+        print(f"{tag} all {count} orders should be cool!; errors: {error_count}")
+        # Create work items to be ingested by the next step in the process
         create_work_items(json_list=json_list)
-        # TODO Sleeping just for testing ...
+        # TODO Sleeping just for dev/testing ...
         sleep(5)
         desktop.click(close)
         sleep(1)
-        print(f"{tag} desktop application should be closed because the work is done!")
+        print(
+            f"\n\n{tag} desktop application should be closed because the work is done!\n"
+        )
         try:
             if app.is_running:
                 desktop.close_application(app)
@@ -137,7 +108,54 @@ def example_orders_task():
         print(f"{tag} Ran into the wall, Boss! probably image locator problem - {e}")
         if app.is_running:
             desktop.close_application(app)
-            print(f"{tag} application should close because of error: {e}")
+            print(f"\n\n{tag} application should be closed because of error: {e}")
+            raise ValueError(f"Probable locator error: {e}")
+
+
+def _handle_order(
+    desktop, count, customer_id, product_id, quantity, checkbox, send_order, order_json
+):
+    """Feed the Desktop app"""
+
+    # Get the values from the dictionary
+    customer_id_value = order_json[0]
+    product_id_value = order_json[1]
+    quantity_value = order_json[2]
+
+    print(
+        f"{tag} handling order #{count + 1}: customer: {customer_id_value} product: {product_id_value} quantity: {quantity_value}"
+    )
+
+    desktop.type_text_into(customer_id, f"{customer_id_value}", True, False)
+    desktop.type_text_into(product_id, f"{product_id_value}", True, False)
+    desktop.type_text_into(quantity, f"{quantity_value}", True, False)
+    desktop.click(checkbox)
+    desktop.click(send_order)
+
+    print(
+        f"{tag} Send Order button clicked!! - customer: {customer_id_value} product: {product_id_value} quantity: {quantity_value}"
+    )
+
+
+def _handle_login(desktop):
+    login = desktop.wait_for_element("login")
+    print(f"{tag} login screen established; {login}")
+    username = desktop.wait_for_element("username")
+    password = desktop.wait_for_element("password")
+
+    username_env = os.getenv("USER_NAME")
+    password_env = os.getenv("PASSWORD")
+    print(f"username element: {username_env} password: {password_env}")
+
+    desktop.type_text_into(username, username_env, True, False)
+    desktop.type_text_into(password, password_env, True, False)
+
+    submit_creds = desktop.wait_for_element("submit")
+    print(f"submit_creds: {submit_creds}")
+    desktop.click("submit")
+    print("Submit button clicked!!")
+    desktop.click("go_to_sales")
+    print("Go to Sales button clicked!!")
 
 
 def create_work_items(json_list: list):
