@@ -1,5 +1,7 @@
 from time import sleep
 from robocorp.tasks import task
+from robocorp import workitems
+
 from RPA.Desktop import Desktop
 
 import os
@@ -45,6 +47,7 @@ def example_orders_task():
     app = desktop.open_application(app_path)
     print(f"{tag} have we opened the RobotTester app? {app}")
     sleep(1)
+    count = 0
     try:
         login = desktop.wait_for_element("login")
         print(f"{tag} login screen established; {login}")
@@ -71,23 +74,59 @@ def example_orders_task():
         checkbox = desktop.wait_for_element("checkbox")
         send_order = desktop.wait_for_element("send_order")
         close = desktop.wait_for_element("close")
-
-        desktop.type_text_into(customer_id, "1102999", True, False)
-        desktop.type_text_into(product_id, "5466$", True, False)
-        desktop.type_text_into(quantity, "98", True, False)
-        desktop.click(checkbox)
-        print("Customer, Product, Qty and checkbox should be cool!")
-        desktop.click(send_order)
-        print("Send Order button clicked!!")
-        create_work_items()
-        # Sleeping just for testing ...
-        sleep(10)
+       
+        try:
+            for order_json in json_list:
+                if count < 2:
+                    count = count + 1
+                    print(f'\n{tag} ignored order_json: {order_json}\n')
+                    continue
+                print(f'{tag} order json: {order_json}')
+                try:
+                    customer_id_value = order_json[0]
+                    product_id_value = order_json[1]
+                    quantity_value = order_json[2]
+                    print(f'{tag} customer_id_value: {customer_id_value} - product_id_value: {product_id_value} quantity_value: {quantity_value}')
+                   
+                    desktop.type_text_into(customer_id, f'{customer_id_value}', True, False)
+                    desktop.type_text_into(product_id, f'{product_id_value}', True, False)
+                    desktop.type_text_into(quantity, f'{quantity_value}', True, False)
+                    desktop.click(checkbox)
+                    desktop.click(send_order)
+                    
+                    print(f"{tag} Send Order button clicked!! - product: {product_id_value} quantity: {quantity_value}")        
+                    count = count + 1
+                    sleep(1)
+                except Exception as e:
+                    print(f'\n{tag} The accelerator seems to be stuck! What we gonna do, Boss? - {e}\n')
+                    continue
+        
+        except Exception as e:
+            print(f'{tag} The tree moved and we crashed into it :) - {e}')
+            if app.is_running:
+                appx = desktop.close_application(app)
+                return
+            
+        print(f"{tag} all {len(json_list)} orders should be cool!")
+        create_work_items(json_list=json_list)
+        # TODO Sleeping just for testing ...
+        sleep(5)
         desktop.click(close)
+        sleep(1)
+        try:
+            if app.is_running:
+                appx = desktop.close_application(app)
+        except Exception as e:
+            print(f'{tag} could not close app, probably already closed by the click: {e}')
+            print(f'{tag} application should be closed because the work is done!: {appx}')
     except Exception as e:
         print(f"{tag} Ran into the wall, Boss! - {e}")
-        appx = desktop.close_application(app_path)
-        print(f'{tag} application should close because of error: {appx}')
+        if app.is_running:
+            appx = desktop.close_application(app)
+            print(f'{tag} application should close because of error: {appx}')
 
-def create_work_items():
+def create_work_items(json_list: list):
     """Create work_items for next step"""
-    print(f"\n\n{tag} will be creating work items here in the near future ....\n\n")
+    workitems.outputs.create(payload={"orders": json_list})
+    print(f"\n\n{tag} work items created: {len(json_list)} ....\n\n")
+

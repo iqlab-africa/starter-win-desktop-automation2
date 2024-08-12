@@ -39,20 +39,37 @@ def download_app_folder():
         print(f"{tag} ..... app blobs found: {len(blob_list)}")
         for blob in blob_list:
             print(f"{tag}  - blob.name: {blob.name}")
+        print("\n")
+        count = 0
+        error_count = 0
         for blob in blob_list:
-            blob_path = blob.name
-            local_path = os.path.join(local_app_folder, blob_path)
-            local_dir = os.path.dirname(local_path)
-            if not os.path.exists(local_dir):
-                os.makedirs(local_dir)
-            blob_client = container_client.get_blob_client(blob_path)
-            with open(local_path, "wb") as download_file:
-                download_file.write(blob_client.download_blob().readall())
-            print(f"{tag} Downloaded OK!! : {local_path}")
+            local_path = os.path.join(local_app_folder, blob.name)
+            # Replace backslashes with forward slashes
+            modified_path = local_path.replace("\\", "/")
+            print(f"\n{tag} processing blob: #{count} - {blob.name} modified path: {modified_path}")
 
+            try:
+                local_dir = os.path.dirname(modified_path)
+                if not os.path.exists(local_dir):
+                    os.makedirs(local_dir)
+                blob_client = container_client.get_blob_client(blob.name)
+                with open(modified_path, "wb") as download_file:
+                    download_file.write(blob_client.download_blob().readall())
+                print(f"{tag} App file downloaded OK!! local path: {modified_path}")
+                count = count + 1
+            except Exception as e:
+                print(
+                    f"\n{tag} Error downloading file: {modified_path} - {e}\n"
+                )
+                error_count = error_count + 1
+                continue
+
+        print(f"{tag} Application files downloaded OK: {count}, errors: {error_count}")
         return blob_list
+    
     except Exception as e:
-        print(f"{tag} Downloading stumbled here, Boss! Error: {e}")
+        print(f'{tag} Errors here! succeeded: {count} errors: {error_count}')
+        print(f"\n\n{tag} Downloading app files stumbling and bumbling, Boss! Error: {e}")
 
 
 def download_orders_files():
@@ -135,16 +152,21 @@ def do_the_work(file_type):
             for file in files:
                 file_path = os.path.join(root, file)
 
-                if file_path.endswith(".xlsx") and file_type == EXCEL_FILE_TYPE:
-                    df = pd.read_excel(file_path)
-                    json_data = df.to_dict(orient="records")
-                    json_list.extend(json_data)
+                if (
+                    file_path.endswith(".xlsx") and file_type == EXCEL_FILE_TYPE
+                ):  # Load the Excel file into a DataFrame, ignoring the header row
+                    df = pd.read_excel(file_path, header=None)
+                    # Convert the DataFrame to a list of dictionaries (JSON format)
+                    # The first row is the header; hence, ignore it by starting from the second row
+                    json_list = df.iloc[1:].to_dict(orient="records")
+
+                    print(f"{tag} Loaded {len(json_list)} records from {file_path}")
+                    return json_list
                     print(f"\n{tag} Loaded {len(json_list)} {file_type} records")
 
                 if file_path.endswith(".csv") and file_type == CSV_FILE_TYPE:
-                    df = pd.read_csv(file_path)
-                    json_data = df.to_dict(orient="records")
-                    json_list.extend(json_data)
+                    df = pd.read_csv(file_path, header=None)
+                    json_list = df.iloc[1:].to_dict(orient="records")
                     print(f"\n{tag} Loaded {len(json_list)} {file_type} records")
 
     except Exception as e:

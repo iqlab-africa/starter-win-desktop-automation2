@@ -9,8 +9,11 @@
         "creds",
         "Dannys",
         "dotenv",
+        "iloc",
         "ordercontainer",
+        "readall",
         "robocorp",
-        "workitem"
+        "workitem",
+        "workitems"
     ]
 }
