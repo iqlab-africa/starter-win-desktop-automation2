@@ -1,9 +1,6 @@
 from time import sleep
 from robocorp.tasks import task
 from RPA.Desktop import Desktop
-import pandas as pd
-from azure.identity import DefaultAzureCredential
-from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 
 import os
 
@@ -18,8 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 tag = "Windows Desktop Robot : "
-account_url = "https://dannysautomation.blob.core.windows.net"
-
+app_path = 'app_folder/app/testapp.exe'
 
 @task
 def example_orders_task():
@@ -40,19 +36,18 @@ def example_orders_task():
 
         print(f"\n\n{tag} number of orders in json_list : {len(json_list)}")
         print(f"{tag} number of app files: {len(app_files)}")
-
-        print(f"{tag} download_app_files has completed? check output folder\n\n")
+    
     except Exception as e:
         print(f"\n\n{tag} We hit a wall here, Boss! - {e}")
 
     desktop = Desktop(locators_path="locators.json")
-    app = desktop.open_application(r"C:\Users\aubreym\Desktop\Dannys\app\testapp.exe")
-
+    #app = desktop.open_application(r"C:\Users\aubreym\Desktop\Dannys\app\testapp.exe")
+    app = desktop.open_application(app_path)
     print(f"{tag} have we opened the RobotTester app? {app}")
     sleep(1)
     try:
         login = desktop.wait_for_element("login")
-        print(f"{tag} login screen established.")
+        print(f"{tag} login screen established; {login}")
         username = desktop.wait_for_element("username")
         password = desktop.wait_for_element("password")
 
@@ -90,12 +85,9 @@ def example_orders_task():
         desktop.click(close)
     except Exception as e:
         print(f"{tag} Ran into the wall, Boss! - {e}")
-        appx = desktop.close_application(
-            r"C:\Users\aubreym\Desktop\Dannys\app\testapp.exe"
-        )
-        print(appx)
-
+        appx = desktop.close_application(app_path)
+        print(f'{tag} application should close because of error: {appx}')
 
 def create_work_items():
-    """Create workitem for next step"""
+    """Create work_items for next step"""
     print(f"\n\n{tag} will be creating work items here in the near future ....\n\n")

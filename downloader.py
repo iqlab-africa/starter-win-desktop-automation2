@@ -1,6 +1,10 @@
 from azure.storage.blob import BlobServiceClient
 import os
 from dotenv import load_dotenv
+import pandas as pd
+
+CSV_FILE_TYPE = "csv"
+EXCEL_FILE_TYPE = "excel"
 
 # Load environment variables from .env file
 load_dotenv()
@@ -73,7 +77,7 @@ def download_orders_files():
             blob_service_client=blob_service_client, filename=orders_excel_file
         )
 
-        print(f"{tag} Order files downloaded OK? csv: {csv} excel: {excel}\n\n")
+        print(f"{tag} Order files downloaded OK? csv: {csv} excel: {excel}\n")
 
     except Exception as e:
         print(f"{tag} download_orders_file: Error: {e}")
@@ -112,14 +116,7 @@ def do_download(blob_service_client, filename):
         print(f"{tag} Error downloading orders: {e}")
 
 
-import pandas as pd
-
-CSV_FILE_TYPE = "csv"
-EXCEL_FILE_TYPE = "excel"
-
-
 def load_csv_files_to_json():
-    print(f"\n\n{tag} loading file contents and creating json list; \n")
     json_list = do_the_work(CSV_FILE_TYPE)
     return json_list
 
@@ -129,8 +126,8 @@ def load_excel_files_to_json():
     return json_list
 
 
-def do_the_work(fileType):
-    print(f"\n\n{tag} loading Excel file contents and creating json list; \n")
+def do_the_work(file_type):
+    print(f"\n\n{tag} loading {file_type} file contents and creating json list")
     json_list = []
 
     try:
@@ -138,26 +135,20 @@ def do_the_work(fileType):
             for file in files:
                 file_path = os.path.join(root, file)
 
-                if file.endswith(".xlsx") and fileType == EXCEL_FILE_TYPE:
-                    print(
-                        f"{tag} reading excel spreadsheet: {file_path} into pandas DataFrame ..."
-                    )
+                if file_path.endswith(".xlsx") and file_type == EXCEL_FILE_TYPE:
                     df = pd.read_excel(file_path)
                     json_data = df.to_dict(orient="records")
                     json_list.extend(json_data)
-                    print(f"\n{tag} Loaded {len(json_list)} records")
+                    print(f"\n{tag} Loaded {len(json_list)} {file_type} records")
 
-                if file.endswith(".csv") and fileType == CSV_FILE_TYPE:
-                    print(
-                        f"{tag} reading csv file: {file_path} into pandas DataFrame ..."
-                    )
+                if file_path.endswith(".csv") and file_type == CSV_FILE_TYPE:
                     df = pd.read_csv(file_path)
                     json_data = df.to_dict(orient="records")
                     json_list.extend(json_data)
-                    print(f"\n{tag} Loaded {len(json_list)} records")
+                    print(f"\n{tag} Loaded {len(json_list)} {file_type} records")
 
     except Exception as e:
         print(f"{tag} We hit a tree this time, Boss! - {e}")
 
-    print(f"\n{tag} returning {len(json_list)} json records from {fileType} file \n\n")
+    print(f"\n{tag} returning {len(json_list)} json records from {file_type} file \n")
     return json_list

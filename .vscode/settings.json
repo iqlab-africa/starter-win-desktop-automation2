@@ -4,6 +4,13 @@
     ],
     "python.terminal.activateEnvironment": false,
     "cSpell.words": [
-        "dotenv"
+        "appcontainer",
+        "aubreym",
+        "creds",
+        "Dannys",
+        "dotenv",
+        "ordercontainer",
+        "robocorp",
+        "workitem"
     ]
 }
