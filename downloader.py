@@ -68,7 +68,7 @@ def download_app_folder():
         return blob_list
     
     except Exception as e:
-        print(f'{tag} Errors here! succeeded: {count} errors: {error_count}')
+        print(f'{tag} Errors found somewhere! succeeded: {count} errors: {error_count}')
         print(f"\n\n{tag} Downloading app files stumbling and bumbling, Boss! Error: {e}")
 
 

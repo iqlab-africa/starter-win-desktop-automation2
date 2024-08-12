@@ -17,7 +17,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 tag = "Windows Desktop Robot : "
-app_path = 'app_folder/app/testapp.exe'
+app_path = "app_folder/app/testapp.exe"
+
 
 @task
 def example_orders_task():
@@ -38,12 +39,12 @@ def example_orders_task():
 
         print(f"\n\n{tag} number of orders in json_list : {len(json_list)}")
         print(f"{tag} number of app files: {len(app_files)}")
-    
+
     except Exception as e:
         print(f"\n\n{tag} We hit a wall here, Boss! - {e}")
 
     desktop = Desktop(locators_path="locators.json")
-    #app = desktop.open_application(r"C:\Users\aubreym\Desktop\Dannys\app\testapp.exe")
+    # app = desktop.open_application(r"C:\Users\aubreym\Desktop\Dannys\app\testapp.exe")
     app = desktop.open_application(app_path)
     print(f"{tag} have we opened the RobotTester app? {app}")
     sleep(1)
@@ -74,59 +75,72 @@ def example_orders_task():
         checkbox = desktop.wait_for_element("checkbox")
         send_order = desktop.wait_for_element("send_order")
         close = desktop.wait_for_element("close")
-       
+
         try:
             for order_json in json_list:
                 if count < 2:
                     count = count + 1
-                    print(f'\n{tag} ignored order_json: {order_json}\n')
+                    print(f"\n{tag} ignored order_json: {order_json}\n")
                     continue
-                print(f'{tag} order json: {order_json}')
+
                 try:
                     customer_id_value = order_json[0]
                     product_id_value = order_json[1]
                     quantity_value = order_json[2]
-                    print(f'{tag} customer_id_value: {customer_id_value} - product_id_value: {product_id_value} quantity_value: {quantity_value}')
-                   
-                    desktop.type_text_into(customer_id, f'{customer_id_value}', True, False)
-                    desktop.type_text_into(product_id, f'{product_id_value}', True, False)
-                    desktop.type_text_into(quantity, f'{quantity_value}', True, False)
+                    print(
+                        f"{tag} handling order #{count + 1}: customer: {customer_id_value} product: {product_id_value} quantity: {quantity_value}"
+                    )
+
+                    desktop.type_text_into(
+                        customer_id, f"{customer_id_value}", True, False
+                    )
+                    desktop.type_text_into(
+                        product_id, f"{product_id_value}", True, False
+                    )
+                    desktop.type_text_into(quantity, f"{quantity_value}", True, False)
                     desktop.click(checkbox)
                     desktop.click(send_order)
-                    
-                    print(f"{tag} Send Order button clicked!! - product: {product_id_value} quantity: {quantity_value}")        
+
+                    print(
+                        f"{tag} Send Order button clicked!! - customer: {customer_id_value} product: {product_id_value} quantity: {quantity_value}"
+                    )
                     count = count + 1
                     sleep(1)
                 except Exception as e:
-                    print(f'\n{tag} The accelerator seems to be stuck! What we gonna do, Boss? - {e}\n')
+                    print(
+                        f"\n{tag} The accelerator seems to be stuck! What we gonna do, Boss? - {e}\n"
+                    )
                     continue
-        
+
         except Exception as e:
-            print(f'{tag} The tree moved and we crashed into it :) - {e}')
+            print(f"{tag} The tree moved and we crashed into it :) - {e}")
             if app.is_running:
                 appx = desktop.close_application(app)
                 return
-            
+
         print(f"{tag} all {len(json_list)} orders should be cool!")
         create_work_items(json_list=json_list)
         # TODO Sleeping just for testing ...
         sleep(5)
         desktop.click(close)
         sleep(1)
+        print(f"{tag} desktop application should be closed because the work is done!")
         try:
             if app.is_running:
-                appx = desktop.close_application(app)
+                desktop.close_application(app)
         except Exception as e:
-            print(f'{tag} could not close app, probably already closed by the click: {e}')
-            print(f'{tag} application should be closed because the work is done!: {appx}')
+            print(
+                f"{tag} could not close app, probably already closed by the click: {e}"
+            )
+
     except Exception as e:
-        print(f"{tag} Ran into the wall, Boss! - {e}")
+        print(f"{tag} Ran into the wall, Boss! probably image locator problem - {e}")
         if app.is_running:
-            appx = desktop.close_application(app)
-            print(f'{tag} application should close because of error: {appx}')
+            desktop.close_application(app)
+            print(f"{tag} application should close because of error: {e}")
+
 
 def create_work_items(json_list: list):
     """Create work_items for next step"""
     workitems.outputs.create(payload={"orders": json_list})
     print(f"\n\n{tag} work items created: {len(json_list)} ....\n\n")
-
