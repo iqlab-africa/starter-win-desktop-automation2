@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "c:/Users/aubreym/Desktop/Dannys/desktop_auto/starter-win-desktop-automation2/."
+    ],
+    "python.terminal.activateEnvironment": false
+}

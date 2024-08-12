@@ -1,0 +1,92 @@
+from time import sleep
+from robocorp.tasks import task
+from RPA.Desktop import Desktop
+import pandas as pd
+from azure.identity import DefaultAzureCredential
+from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+
+import os
+
+from downloader import CSV_FILE_TYPE, download_app_folder, download_orders_files, load_files_to_json
+from dotenv import load_dotenv
+
+load_dotenv()
+
+tag ='Windows Desktop Robot : '
+account_url = "https://dannysautomation.blob.core.windows.net"
+
+@task
+def example_orders_task():
+    '''Example Robot to show how to integrate Azure functionality and dependency externalization'''
+    print(f'\n\n{tag} ...... Task starting .... will start downloading app and orders from Azure Storage')
+    try:
+        download_orders_files()
+        json_list = load_files_to_json(file_type=CSV_FILE_TYPE)
+
+        # get the desktop app files ....
+        app_files = download_app_folder()
+
+        print(f'{tag} number of orders in json_list : {len(json_list)}')
+        print(f'{tag} number of app files: {len(app_files)}')
+
+        print(f'{tag} download_app_files has completed? check output folder\n\n')
+    except Exception as e:
+        print(f'\n\n{tag} We hit a wall here, Boss! - {e}')
+
+    desktop = Desktop(locators_path='locators.json')
+    app = desktop.open_application(r'C:\Users\aubreym\Desktop\Dannys\app\testapp.exe')
+
+    print(f'{tag} have we opened the RobotTester app? {app}')
+    sleep(1)
+    try:
+        login =  desktop.wait_for_element('login')
+        print(f'{tag} login screen established.')
+        username = desktop.wait_for_element('username')
+        password = desktop.wait_for_element('password')
+
+        username_env = os.getenv('USER_NAME')
+        password_env = os.getenv('PASSWORD')
+        print(f'username element: {username_env} password: {password_env}')
+
+
+
+        desktop.type_text_into(username, username_env, True, False)
+        desktop.type_text_into(password, password_env, True, False)
+
+        submit_creds = desktop.wait_for_element('submit')
+        print(f'submit_creds: {submit_creds}')
+        desktop.click('submit')
+        print('Submit button clicked!!')
+        desktop.click('go_to_sales')
+        print('Go to Sales button clicked!!')
+        # app has navigated to order screen
+        customer_id = desktop.wait_for_element('customer_id')
+        product_id = desktop.wait_for_element('product_id')
+        quantity = desktop.wait_for_element('quantity')
+        checkbox = desktop.wait_for_element('checkbox')
+        send_order = desktop.wait_for_element('send_order')
+        close = desktop.wait_for_element('close')
+
+
+        desktop.type_text_into(customer_id, '1102999', True, False)
+        desktop.type_text_into(product_id, '5466$', True, False)
+        desktop.type_text_into(quantity, '98', True, False)
+        desktop.click(checkbox)
+        print('Customer, Product, Qty and checkbox should be cool!');
+        desktop.click(send_order)
+        print('Send Order button clicked!!')
+        create_work_item()
+        # Sleeping just for testing ...
+        sleep(10)
+        desktop.click(close)
+    except Exception as e:
+        print(f'{tag} Ran into the wall, Boss! - {e}')
+        appx = desktop.close_application(r'C:\Users\aubreym\Desktop\Dannys\app\testapp.exe')
+        print(appx)
+
+def create_work_item(customer_id, product_id, quantity):
+    '''Create workitem for next step'''
+    print(f'\n\n{tag} will be creating work items here in the near future ....\n\n')
+
+
+

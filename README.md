@@ -1,2 +1,2 @@
-# starter-win-desktop-automation2
+# starter-win-desktop-automation
 Example Windows Desktop Automation
