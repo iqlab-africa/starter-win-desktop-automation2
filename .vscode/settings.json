@@ -2,5 +2,8 @@
     "python.analysis.extraPaths": [
         "c:/Users/aubreym/Desktop/Dannys/desktop_auto/starter-win-desktop-automation2/."
     ],
-    "python.terminal.activateEnvironment": false
+    "python.terminal.activateEnvironment": false,
+    "cSpell.words": [
+        "dotenv"
+    ]
 }
