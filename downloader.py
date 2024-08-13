@@ -3,6 +3,8 @@ import os
 from dotenv import load_dotenv
 import pandas as pd
 
+from environment_util import get_azure_connection_string
+
 CSV_FILE_TYPE = "csv"
 EXCEL_FILE_TYPE = "excel"
 
@@ -19,21 +21,20 @@ orders_excel_file = "orders.xlsx"
 orders_csv_file = "orders.csv"
 tag = "File Downloader"
 
-
 def download_app_folder():
     print(f"\n\n{tag}... download_app_folder starting ...")
     try:
-        connection_string = os.getenv("AZURE_CONNECTION_STRING")
+        connection_string = get_azure_connection_string()
         if not connection_string:
             raise ValueError("Connection string not found in environment variables")
         else:
-            print(f"{tag} We good with AZURE_CONNECTION_STRING ...")
+            print(f"{tag} We good with AZURE_CONNECTION_STRING ...\n{connection_string}")
 
         blob_service_client = BlobServiceClient.from_connection_string(
             connection_string
         )
+        
         container_client = blob_service_client.get_container_client(app_container_name)
-        blob_list = container_client.list_blobs()
         # Convert the ItemPaged object to a list
         blob_list = list(container_client.list_blobs())
         print(f"{tag} ..... app blobs found: {len(blob_list)}")
@@ -77,20 +78,20 @@ def download_orders_files():
         print(
             f"\n\n{tag} ... download_orders_files starting ... files: {orders_excel_file} {orders_csv_file}"
         )
-        connection_string = os.getenv("AZURE_CONNECTION_STRING")
+        connection_string = get_azure_connection_string()
         if not connection_string:
             raise ValueError("Connection string not found in environment variables")
         else:
-            print(f"{tag} We good with AZURE_CONNECTION_STRING ...")
+            print(f"{tag} We good with AZURE_CONNECTION_STRING ...\n{connection_string}")
 
         blob_service_client = BlobServiceClient.from_connection_string(
             connection_string
         )
 
-        csv = do_download(
+        csv = _do_download(
             blob_service_client=blob_service_client, filename=orders_csv_file
         )
-        excel = do_download(
+        excel = _do_download(
             blob_service_client=blob_service_client, filename=orders_excel_file
         )
 
@@ -100,7 +101,7 @@ def download_orders_files():
         print(f"{tag} download_orders_file: Error: {e}")
 
 
-def do_download(blob_service_client, filename):
+def _do_download(blob_service_client, filename):
     try:
         container_client = blob_service_client.get_container_client(
             orders_container_name
@@ -134,16 +135,16 @@ def do_download(blob_service_client, filename):
 
 
 def load_csv_files_to_json():
-    json_list = do_the_work(CSV_FILE_TYPE)
+    json_list = _do_the_work(CSV_FILE_TYPE)
     return json_list
 
 
 def load_excel_files_to_json():
-    json_list = do_the_work(EXCEL_FILE_TYPE)
+    json_list = _do_the_work(EXCEL_FILE_TYPE)
     return json_list
 
 
-def do_the_work(file_type):
+def _do_the_work(file_type):
     print(f"\n\n{tag} loading {file_type} file contents and creating json list")
     json_list = []
 
